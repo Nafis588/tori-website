@@ -120,8 +120,15 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
   const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
-    setMenu(getMenu());
-    setSettings(getSettings());
+    const loadData = async () => {
+      const [loadedMenu, loadedSettings] = await Promise.all([
+        getMenu(),
+        getSettings()
+      ]);
+      setMenu(loadedMenu);
+      setSettings(loadedSettings);
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -151,7 +158,7 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
     }
   }, [theme]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setSearchError('');
     
@@ -162,7 +169,7 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
       return;
     }
 
-    const cards = getCards();
+    const cards = await getCards();
     const tokenUpper = searchToken.trim().toUpperCase();
     const foundCard = cards.find(c => c.token.toUpperCase() === tokenUpper);
 
@@ -185,7 +192,7 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!registerName || !registerPhone) {
       setSearchError('Name and Phone number are required.');
@@ -194,7 +201,7 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
 
     if (!searchedCard) return;
 
-    const cards = getCards();
+    const cards = await getCards();
     const updatedCards = cards.map(c => {
       if (c.token === searchedCard.token) {
         return {
@@ -209,7 +216,7 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
       return c;
     });
 
-    saveCards(updatedCards);
+    await saveCards(updatedCards);
     
     // Update local searched card state
     const newlyPendingCard = updatedCards.find(c => c.token === searchedCard.token)!;

@@ -30,8 +30,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   // Database states
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [settings, setSettings] = useState<RestaurantSettings>(() => {
-    return getSettings();
+  const [settings, setSettings] = useState<RestaurantSettings>({
+    name: 'Tori Sushi',
+    phone: '',
+    address: '',
+    hours: '',
+    bannerText: '',
+    stampRewardLimit: 10
   });
 
   // Card filter states
@@ -79,13 +84,22 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   useEffect(() => {
     if (isAuthenticated) {
       loadAllData();
+    } else {
+      // Load settings even when not authenticated (for logo on login screen)
+      const loadSettings = async () => {
+        const s = await getSettings();
+        setSettings(s);
+      };
+      loadSettings();
     }
   }, [isAuthenticated]);
 
-  const loadAllData = () => {
-    const loadedCards = getCards();
-    const loadedMenu = getMenu();
-    const loadedSettings = getSettings();
+  const loadAllData = async () => {
+    const [loadedCards, loadedMenu, loadedSettings] = await Promise.all([
+      getCards(),
+      getMenu(),
+      getSettings()
+    ]);
 
     setCards(loadedCards);
     setMenu(loadedMenu);
@@ -139,7 +153,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   // --- LOYALTY CARD ACTIONS ---
   
   // Approve pending signup
-  const handleApproveCard = (token: string) => {
+  const handleApproveCard = async (token: string) => {
     const updated = cards.map(c => {
       if (c.token === token) {
         return {
@@ -150,8 +164,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       }
       return c;
     });
-    saveCards(updated);
     setCards(updated);
+    await saveCards(updated);
     
     confetti({
       particleCount: 50,
@@ -163,7 +177,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   };
 
   // Add one stamp mark
-  const handleAddStamp = (token: string) => {
+  const handleAddStamp = async (token: string) => {
     const updated = cards.map(c => {
       if (c.token === token && c.status === 'approved') {
         const nextCount = c.orderCount + 1;
@@ -184,12 +198,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       }
       return c;
     });
-    saveCards(updated);
     setCards(updated);
+    await saveCards(updated);
   };
 
   // Decrement/Remove one stamp mark (for correction)
-  const handleRemoveStamp = (token: string) => {
+  const handleRemoveStamp = async (token: string) => {
     const updated = cards.map(c => {
       if (c.token === token && c.orderCount > 0) {
         return {
@@ -199,12 +213,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       }
       return c;
     });
-    saveCards(updated);
     setCards(updated);
+    await saveCards(updated);
   };
 
   // Generate new loyalty token
-  const handleGenerateToken = () => {
+  const handleGenerateToken = async () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let randomCode = '';
     
@@ -232,16 +246,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
     };
 
     const updated = [newCard, ...cards];
-    saveCards(updated);
     setCards(updated);
+    await saveCards(updated);
   };
 
   // Delete Card
-  const confirmDeleteCard = () => {
+  const confirmDeleteCard = async () => {
     if (!cardTokenToDelete) return;
     const updated = cards.filter(c => c.token.trim() !== cardTokenToDelete.trim());
-    saveCards(updated);
     setCards(updated);
+    await saveCards(updated);
     setCardTokenToDelete(null);
   };
 
@@ -267,7 +281,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
     setIsMenuModalOpen(true);
   };
 
-  const handleMenuSubmit = (e: React.FormEvent) => {
+  const handleMenuSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!menuFormTitle || !menuFormPrice) return;
 
@@ -309,17 +323,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       updatedMenu = [...menu, newItem];
     }
 
-    saveMenu(updatedMenu);
     setMenu(updatedMenu);
+    await saveMenu(updatedMenu);
     setIsMenuModalOpen(false);
     setEditingMenuItem(null);
   };
 
-  const confirmDeleteMenuItem = () => {
+  const confirmDeleteMenuItem = async () => {
     if (!menuItemIdToDelete) return;
     const updated = menu.filter(m => m.id !== menuItemIdToDelete);
-    saveMenu(updated);
     setMenu(updated);
+    await saveMenu(updated);
     setMenuItemIdToDelete(null);
   };
 
@@ -346,7 +360,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
 
   // --- SETTINGS ACTIONS ---
 
-  const handleSaveSettingsSubmit = (e: React.FormEvent) => {
+  const handleSaveSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const updatedSettings: RestaurantSettings = {
       name: settingsName,
@@ -365,8 +379,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       heroImageUrl: settingsHeroImageUrl,
       aboutImageUrl: settingsAboutImageUrl
     };
-    saveSettings(updatedSettings);
     setSettings(updatedSettings);
+    await saveSettings(updatedSettings);
     alert('Restaurant details, branding assets, and website components updated successfully!');
   };
 
