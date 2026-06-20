@@ -5,6 +5,7 @@ export interface MenuItem {
   price: number;
   category: string;
   imageType: 'crab' | 'tuna' | 'cheese' | 'salmon' | 'bulgogi' | 'combo' | 'tempura' | 'nigiri';
+  imageUrl?: string;
 }
 
 export interface LoyaltyCard {
@@ -26,4 +27,13 @@ export interface RestaurantSettings {
   hours: string;
   bannerText: string;
   stampRewardLimit: number;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  aboutTitle?: string;
+  aboutText?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  logoUrl?: string;
+  heroImageUrl?: string;
+  aboutImageUrl?: string;
 }

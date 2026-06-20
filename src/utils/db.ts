@@ -1,4 +1,4 @@
-import { MenuItem, LoyaltyCard, RestaurantSettings } from '../types';
+import type { MenuItem, LoyaltyCard, RestaurantSettings } from '../types';
 
 const MENU_KEY = 'tori_sushi_menu_items';
 const CARDS_KEY = 'tori_sushi_loyalty_cards';
@@ -124,7 +124,13 @@ const DEFAULT_SETTINGS: RestaurantSettings = {
   address: 'Road 11, Banani, Dhaka, Bangladesh',
   hours: 'Tuesday - Sunday: 12:00 PM - 10:30 PM (Monday Closed)',
   bannerText: '✨ Order 9 times, get your 10th Sushi Roll FREE! Ask for your loyalty token in-store! ✨',
-  stampRewardLimit: 10
+  stampRewardLimit: 10,
+  heroTitle: 'Crafting Art on a Bamboo Mat',
+  heroSubtitle: 'At Tori Sushi, every roll represents a balance of traditions and modern culinary fusion. Fresh ingredients, exquisite flavors, and premium presentation await you.',
+  aboutTitle: 'The Tori Sushi Story',
+  aboutText: 'Tori Sushi brings the finest Japanese culinary experience to Dhaka, Bangladesh. We believe that sushi is more than just food—it is an art form. Our chefs combine time-honored traditional techniques with bold modern fusions to create memorable dining moments. From crunchy prawn tempuras to fresh salmon cuts, each plate is crafted with utmost dedication to quality, flavor, and elegance.',
+  facebookUrl: 'https://www.facebook.com/tori.sushi.bd',
+  instagramUrl: 'https://www.instagram.com/tori.sushi.bd'
 };
 
 // SHA-256 hash of "admin123" to store as default password hash
@@ -145,9 +151,20 @@ export function initializeDatabase() {
   if (!localStorage.getItem(CARDS_KEY)) {
     localStorage.setItem(CARDS_KEY, JSON.stringify(DEFAULT_CARDS));
   }
-  if (!localStorage.getItem(SETTINGS_KEY)) {
+  
+  const existingSettingsStr = localStorage.getItem(SETTINGS_KEY);
+  if (!existingSettingsStr) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_SETTINGS));
+  } else {
+    try {
+      const parsed = JSON.parse(existingSettingsStr);
+      const merged = { ...DEFAULT_SETTINGS, ...parsed };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+    } catch (e) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_SETTINGS));
+    }
   }
+  
   if (!localStorage.getItem(ADMIN_HASH_KEY)) {
     localStorage.setItem(ADMIN_HASH_KEY, DEFAULT_ADMIN_HASH);
   }

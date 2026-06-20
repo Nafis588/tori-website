@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, Phone, Mail, Award, MapPin, Clock, ExternalLink, ShieldCheck, Check } from 'lucide-react';
-import { getCards, saveCards, getMenu, getSettings, LoyaltyCard, MenuItem, RestaurantSettings } from '../utils/db';
+import { Search, User, Phone, Mail, Award, MapPin, Clock, ExternalLink, ShieldCheck, X, Sun, Moon, Monitor } from 'lucide-react';
+import { getCards, saveCards, getMenu, getSettings } from '../utils/db';
+import type { LoyaltyCard, MenuItem, RestaurantSettings } from '../types';
 import confetti from 'canvas-confetti';
 
 interface RestaurantHomeProps {
@@ -92,9 +93,16 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
     address: 'Road 11, Banani, Dhaka, Bangladesh',
     hours: 'Tuesday - Sunday: 12:00 PM - 10:30 PM (Monday Closed)',
     bannerText: '✨ Order 9 times, get your 10th Sushi Roll FREE! Ask for your loyalty token in-store! ✨',
-    stampRewardLimit: 10
+    stampRewardLimit: 10,
+    heroTitle: 'Crafting Art on a Bamboo Mat',
+    heroSubtitle: 'At Tori Sushi, every roll represents a balance of traditions and modern culinary fusion. Fresh ingredients, exquisite flavors, and premium presentation await you.',
+    aboutTitle: 'The Tori Sushi Story',
+    aboutText: 'Tori Sushi brings the finest Japanese culinary experience to Dhaka, Bangladesh. We believe that sushi is more than just food—it is an art form. Our chefs combine time-honored traditional techniques with bold modern fusions to create memorable dining moments. From crunchy prawn tempuras to fresh salmon cuts, each plate is crafted with utmost dedication to quality, flavor, and elegance.',
+    facebookUrl: 'https://www.facebook.com/tori.sushi.bd',
+    instagramUrl: 'https://www.instagram.com/tori.sushi.bd'
   });
 
+  const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
   const [searchToken, setSearchToken] = useState('');
   const [searchedCard, setSearchedCard] = useState<LoyaltyCard | null>(null);
   const [searchError, setSearchError] = useState('');
@@ -104,7 +112,10 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
   const [registerName, setRegisterName] = useState('');
   const [registerPhone, setRegisterPhone] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState(false);
+
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
+    return (localStorage.getItem('tori_sushi_theme') as 'light' | 'dark' | 'system') || 'system';
+  });
 
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -113,10 +124,36 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
     setSettings(getSettings());
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('tori_sushi_theme', theme);
+    const root = window.document.body;
+    
+    const applyTheme = (resolvedTheme: 'light' | 'dark') => {
+      if (resolvedTheme === 'light') {
+        root.classList.add('light-theme');
+      } else {
+        root.classList.remove('light-theme');
+      }
+    };
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+      applyTheme(mediaQuery.matches ? 'light' : 'dark');
+      
+      const listener = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? 'light' : 'dark');
+      };
+      
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    } else {
+      applyTheme(theme);
+    }
+  }, [theme]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchError('');
-    setRegisterSuccess(false);
     
     if (!searchToken.trim()) {
       setSearchError('Please enter a loyalty token number.');
@@ -177,7 +214,6 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
     // Update local searched card state
     const newlyPendingCard = updatedCards.find(c => c.token === searchedCard.token)!;
     setSearchedCard(newlyPendingCard);
-    setRegisterSuccess(true);
     
     // Reset form fields
     setRegisterName('');
@@ -235,18 +271,53 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
         </div>
       )}
 
-      {/* Header */}
       <header>
         <div className="nav-container">
           <a href="#" className="logo-link">
-            <div className="logo-icon-container">
-              <span style={{ fontSize: '1.25rem' }}>⛩️</span>
-            </div>
-            <h1 className="logo-text">TORI<span>sushi</span></h1>
+            {settings.logoUrl ? (
+              <img src={settings.logoUrl} alt="Tori Sushi Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+            ) : (
+              <>
+                <div className="logo-icon-container">
+                  <span style={{ fontSize: '1.25rem' }}>⛩️</span>
+                </div>
+                <h1 className="logo-text">TORI<span>sushi</span></h1>
+              </>
+            )}
           </a>
           <div className="flex items-center gap-4">
+            <div className="theme-switch-container">
+              <button 
+                onClick={() => setTheme('light')} 
+                className={`theme-switch-btn ${theme === 'light' ? 'active' : ''}`}
+                title="Light Mode"
+              >
+                <Sun className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setTheme('dark')} 
+                className={`theme-switch-btn ${theme === 'dark' ? 'active' : ''}`}
+                title="Dark Mode"
+              >
+                <Moon className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setTheme('system')} 
+                className={`theme-switch-btn ${theme === 'system' ? 'active' : ''}`}
+                title="System Theme"
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+            </div>
             <a href="#menu" className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>Menu</a>
-            <a href="#loyalty" className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>Loyalty Card</a>
+            <a href="#about" className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>About Us</a>
+            <button 
+              onClick={() => setIsLoyaltyModalOpen(true)} 
+              className="btn-primary" 
+              style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+            >
+              Loyalty Card
+            </button>
           </div>
         </div>
       </header>
@@ -254,235 +325,85 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
       {/* Main Content */}
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         {/* Hero Section */}
-        <section className="text-center py-16 max-w-3xl mx-auto animate-slideup">
-          <span className="text-xs tracking-[0.2em] uppercase font-bold text-gold mb-3 block">Premium Japanese Dining</span>
-          <h2 className="text-5xl md:text-6xl font-extrabold mb-6 font-display leading-tight">
-            Crafting Art on a <span className="text-tori-red">Bamboo Mat</span>
-          </h2>
-          <p className="text-text-secondary text-lg mb-8 leading-relaxed">
-            At Tori Sushi, every roll represents a balance of traditions and modern culinary fusion. Fresh ingredients, exquisite flavors, and premium presentation await you.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a href="#menu" className="btn-primary">View Full Menu</a>
-            <a href="#loyalty" className="btn-secondary">Check Loyalty Card</a>
+        <section 
+          className="text-center py-20 max-w-5xl mx-auto animate-slideup rounded-3xl overflow-hidden relative"
+          style={
+            settings.heroImageUrl 
+              ? { 
+                  backgroundImage: `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url(${settings.heroImageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-glass)',
+                  paddingLeft: '2rem',
+                  paddingRight: '2rem'
+                }
+              : {
+                  paddingLeft: '2rem',
+                  paddingRight: '2rem'
+                }
+          }
+        >
+          <div className="max-w-3xl mx-auto relative z-10">
+            <span className="text-xs tracking-[0.2em] uppercase font-bold text-gold mb-3 block">Premium Japanese Dining</span>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-6 font-display leading-tight text-white">
+              {settings.heroTitle || 'Crafting Art on a Bamboo Mat'}
+            </h2>
+            <p className="text-text-secondary text-base md:text-lg mb-8 leading-relaxed">
+              {settings.heroSubtitle || 'At Tori Sushi, every roll represents a balance of traditions and modern culinary fusion. Fresh ingredients, exquisite flavors, and premium presentation await you.'}
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <a href="#menu" className="btn-primary">View Full Menu</a>
+              <button onClick={() => setIsLoyaltyModalOpen(true)} className="btn-secondary">Check Loyalty Card</button>
+            </div>
           </div>
         </section>
 
-        {/* Loyalty Portal Section */}
-        <section id="loyalty" className="py-16 border-t border-border">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Search Input Area */}
-            <div>
-              <span className="text-xs tracking-[0.2em] uppercase font-bold text-gold mb-3 block">Reward System</span>
-              <h3 className="text-3xl font-bold mb-4 font-display">Tori Loyalty Stamp Card</h3>
-              <p className="text-text-secondary mb-6 leading-relaxed">
-                Enter your physical loyalty card token number below to verify your card status, view your details, and count your order stamps. For every order, tell your token to the server to add a stamp mark.
-              </p>
-              
-              <form onSubmit={handleSearch} className="flex gap-3 mb-4">
-                <div className="relative flex-grow">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
-                    <Search className="h-5 w-5" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Enter Token (e.g. TORI-777)"
-                    value={searchToken}
-                    onChange={(e) => setSearchToken(e.target.value)}
-                    className="form-input"
-                    style={{ paddingLeft: '2.75rem' }}
+        {/* About Us Section */}
+        <section id="about" className="py-16 border-t border-border">
+          <div className="grid-2">
+            <div className="relative animate-slideup">
+              {settings.aboutImageUrl ? (
+                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-glass)' }}>
+                  <img 
+                    src={settings.aboutImageUrl} 
+                    alt="About Tori Sushi" 
+                    style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '380px', objectFit: 'cover' }} 
                   />
-                </div>
-                <button type="submit" className="btn-primary">
-                  Verify Card
-                </button>
-              </form>
-
-              {searchError && (
-                <div className="text-ginger text-sm font-semibold mt-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ginger"></span>
-                  {searchError}
-                </div>
-              )}
-            </div>
-
-            {/* Display Output Area */}
-            <div className="flex justify-center">
-              {hasSearched && searchedCard ? (
-                <div className="w-full max-w-md">
-                  {/* Status Gating */}
-                  {searchedCard.status === 'new' && (
-                    <div className="glass-card animate-slideup" style={{ padding: '2rem' }}>
-                      <div className="flex items-center gap-3 mb-4 text-gold">
-                        <Award className="w-6 h-6" />
-                        <h4 className="font-bold text-lg font-display">Register Your Token</h4>
-                      </div>
-                      <p className="text-text-secondary text-sm mb-4 leading-relaxed">
-                        This token <code className="text-white font-mono bg-black/40 px-1.5 py-0.5 rounded">{searchedCard.token}</code> represents your first order at Tori Sushi. Provide your details below to register. The owner will verify and approve your loyalty status.
-                      </p>
-
-                      <form onSubmit={handleRegisterSubmit}>
-                        <div className="form-group">
-                          <label className="form-label">Full Name</label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
-                              <User className="h-4 w-4" />
-                            </span>
-                            <input
-                              type="text"
-                              required
-                              value={registerName}
-                              onChange={(e) => setRegisterName(e.target.value)}
-                              placeholder="John Doe"
-                              className="form-input text-sm"
-                              style={{ paddingLeft: '2.5rem' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Phone Number</label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
-                              <Phone className="h-4 w-4" />
-                            </span>
-                            <input
-                              type="tel"
-                              required
-                              value={registerPhone}
-                              onChange={(e) => setRegisterPhone(e.target.value)}
-                              placeholder="01712XXXXXX"
-                              className="form-input text-sm"
-                              style={{ paddingLeft: '2.5rem' }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Email Address (Optional)</label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
-                              <Mail className="h-4 w-4" />
-                            </span>
-                            <input
-                              type="email"
-                              value={registerEmail}
-                              onChange={(e) => setRegisterEmail(e.target.value)}
-                              placeholder="john@example.com"
-                              className="form-input text-sm"
-                              style={{ paddingLeft: '2.5rem' }}
-                            />
-                          </div>
-                        </div>
-
-                        <button type="submit" className="btn-primary w-full justify-center">
-                          Register Loyalty Card
-                        </button>
-                      </form>
-                    </div>
-                  )}
-
-                  {searchedCard.status === 'pending' && (
-                    <div className="glass-card text-center animate-slideup" style={{ padding: '2rem' }}>
-                      <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Clock className="w-8 h-8 text-gold" />
-                      </div>
-                      <h4 className="font-bold text-xl mb-2 font-display text-gold">Awaiting Approval</h4>
-                      <p className="text-text-secondary text-sm mb-4 leading-relaxed">
-                        Hey <strong>{searchedCard.customerName}</strong>, your registration for token <code className="text-white font-mono bg-black/40 px-1.5 py-0.5 rounded">{searchedCard.token}</code> has been received.
-                      </p>
-                      <div className="bg-black/30 border border-border rounded-lg p-3 text-xs text-text-muted mb-4">
-                        Status: Pending Owner Verification
-                      </div>
-                      <p className="text-xs text-text-muted">
-                        Our management team will approve your membership soon. Once approved, you can start tracking stamps for your orders!
-                      </p>
-                    </div>
-                  )}
-
-                  {searchedCard.status === 'approved' && (
-                    <div className="loyalty-card-wrapper animate-slideup">
-                      <div className="loyalty-card-visual">
-                        <div className="loyalty-card-header">
-                          <div>
-                            <div className="loyalty-card-title">TORI SUSHI</div>
-                            <div className="loyalty-card-sub">Loyalty Card</div>
-                          </div>
-                          <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
-                            <span style={{ fontSize: '0.8rem' }}>⛩️</span>
-                          </div>
-                        </div>
-
-                        {/* Stamp Grid */}
-                        <div className="loyalty-grid">
-                          {renderStampSlots(searchedCard)}
-                        </div>
-
-                        <div className="loyalty-card-footer">
-                          <div className="card-holder-info">
-                            <span className="card-holder-name">{searchedCard.customerName}</span>
-                            <span className="card-holder-token">Token: {searchedCard.token}</span>
-                          </div>
-                          <div className="stamp-count-text">
-                            {searchedCard.orderCount} Stamps
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Celebration Banners */}
-                      {searchedCard.orderCount > 0 && searchedCard.orderCount % settings.stampRewardLimit === 0 && (
-                        <div className="mt-4 p-4 rounded-xl border border-gold bg-amber-500/10 text-center animate-pulse">
-                          <p className="text-gold font-bold text-sm flex items-center justify-center gap-1.5">
-                            <span>🎉</span> 10th ORDER REACHED! <span>🎉</span>
-                          </p>
-                          <p className="text-xs text-text-primary mt-1">
-                            Present this card to the manager to redeem your FREE Sushi Roll!
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Summary status text */}
-                      <div className="mt-4 flex items-center justify-between text-xs text-text-muted px-2">
-                        <span className="flex items-center gap-1">
-                          <ShieldCheck className="w-4 h-4 text-wasabi" /> Active Loyalty Card
-                        </span>
-                        <span>
-                          Joined: {new Date(searchedCard.approvedAt || searchedCard.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)' }}></div>
                 </div>
               ) : (
-                /* Fallback Placeholder Visual Card */
-                <div className="loyalty-card-wrapper opacity-40 hover:opacity-60 transition-opacity">
-                  <div className="loyalty-card-visual">
-                    <div className="loyalty-card-header">
-                      <div>
-                        <div className="loyalty-card-title">TORI SUSHI</div>
-                        <div className="loyalty-card-sub">Loyalty Card</div>
-                      </div>
-                      <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
-                        <span style={{ fontSize: '0.8rem' }}>⛩️</span>
-                      </div>
-                    </div>
-                    <div className="loyalty-grid">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className="stamp-slot empty-gate"></div>
-                      ))}
-                    </div>
-                    <div className="loyalty-card-footer">
-                      <div className="card-holder-info">
-                        <span className="card-holder-name">Enter Token Above</span>
-                        <span className="card-holder-token">Token: TORI-XXX</span>
-                      </div>
-                      <div className="stamp-count-text">
-                        0 Stamps
-                      </div>
-                    </div>
+                <div className="about-decor-card">
+                  <div className="about-decor-gradient"></div>
+                  <div className="about-decor-circle"></div>
+                  <div className="about-decor-badge">
+                    <span style={{ fontSize: '3rem', display: 'block', marginBottom: '0.5rem' }}>⛩️</span>
+                    <h4 className="font-display text-xl font-bold tracking-wider text-white">TORI SUSHI</h4>
+                    <div style={{ width: '3rem', height: '2px', backgroundColor: 'var(--color-tori-red)', margin: '0.75rem auto' }}></div>
+                    <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--color-gold)', margin: 0 }}>DHAKA, BANGLADESH</p>
                   </div>
                 </div>
               )}
+            </div>
+            
+            <div className="animate-slideup">
+              <span className="text-xs tracking-[0.2em] uppercase font-bold text-gold mb-3 block">Our Heritage</span>
+              <h3 className="text-3xl md:text-4xl font-bold mb-6 font-display leading-tight text-white">
+                {settings.aboutTitle || 'The Tori Sushi Story'}
+              </h3>
+              <p className="text-text-secondary text-sm md:text-base leading-relaxed mb-6 whitespace-pre-line">
+                {settings.aboutText || 'Tori Sushi brings the finest Japanese flavors to Dhaka. Our chefs craft each dish with precision and passion.'}
+              </p>
+              <div className="flex gap-8 border-t border-border/60 pt-6">
+                <div>
+                  <h5 className="text-white font-bold text-2xl font-display">100%</h5>
+                  <p className="text-xs text-text-muted mt-1">Fresh Ingredients</p>
+                </div>
+                <div>
+                  <h5 className="text-white font-bold text-2xl font-display">Premium</h5>
+                  <p className="text-xs text-text-muted mt-1">Authentic Taste</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -513,16 +434,32 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           {/* Menu Items Grid */}
           <div className="menu-grid">
             {filteredMenu.map(item => (
-              <div key={item.id} className="menu-card">
-                <div className="menu-card-header">
-                  <h4 className="menu-item-title">{item.title}</h4>
-                  <span className="menu-item-price">{item.price} Tk</span>
-                </div>
-                <p className="menu-item-desc">{item.description}</p>
-                <div className="menu-card-footer">
-                  <span className="menu-item-category">{item.category}</span>
-                  <div className="sushi-icon-badge">
-                    <SushiIcon type={item.imageType} className="w-6 h-6" />
+              <div key={item.id} className="menu-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
+                {item.imageUrl ? (
+                  <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.title} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      className="hover-scale-img"
+                    />
+                  </div>
+                ) : null}
+                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                  <div className="menu-card-header">
+                    <h4 className="menu-item-title">{item.title}</h4>
+                    <span className="menu-item-price">{item.price} Tk</span>
+                  </div>
+                  <p className="menu-item-desc" style={{ flexGrow: 1 }}>{item.description}</p>
+                  <div className="menu-card-footer" style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                    <span className="menu-item-category">{item.category}</span>
+                    <div className="sushi-icon-badge">
+                      {item.imageUrl ? (
+                        <span style={{ fontSize: '1rem' }}>🍣</span>
+                      ) : (
+                        <SushiIcon type={item.imageType} className="w-6 h-6" />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -534,14 +471,18 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
       {/* Footer */}
       <footer className="bg-[#0b0b0d] border-t border-border py-12 text-sm text-text-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <div className="grid-3 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="logo-icon-container" style={{ width: '28px', height: '28px', border: '1px solid white' }}>
-                  <span style={{ fontSize: '0.65rem' }}>⛩️</span>
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt="Tori Sushi Logo" className="mb-3" style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              ) : (
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="logo-icon-container" style={{ width: '28px', height: '28px', border: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '0.65rem' }}>⛩️</span>
+                  </div>
+                  <span className="font-bold text-white font-display text-lg tracking-wider">TORI SUSHI</span>
                 </div>
-                <span className="font-bold text-white font-display text-lg tracking-wider">TORI SUSHI</span>
-              </div>
+              )}
               <p className="text-xs leading-relaxed max-w-xs">
                 Handcrafted premium sushi delivered straight to your door or served in the heart of Dhaka.
               </p>
@@ -553,8 +494,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
                 <p className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-tori-red" /> {settings.address}
                 </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gold" /> Phone: {settings.phone}
+                <p className="flex items-center gap-2 text-white">
+                  <Phone className="w-4 h-4 text-gold animate-pulse" /> Phone: {settings.phone}
                 </p>
               </div>
             </div>
@@ -569,16 +510,31 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           </div>
 
           <div className="border-t border-border/40 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
-            <p>&copy; {new Date().getFullYear()} Tori Sushi Bangladesh. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Tori Sushi Bangladesh. All rights reserved. <span className="text-text-muted">| Made by Obscura IT</span></p>
             <div className="flex gap-4">
-              <a
-                href="https://www.facebook.com/tori.sushi.bd"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-white flex items-center gap-1"
-              >
-                Facebook Page <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              {settings.facebookUrl && (
+                <a
+                  href={settings.facebookUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-white flex items-center gap-1"
+                >
+                  Facebook Page <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {settings.instagramUrl && (
+                <>
+                  <span className="text-border/60">|</span>
+                  <a
+                    href={settings.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-white flex items-center gap-1"
+                  >
+                    Instagram <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </>
+              )}
               <span className="text-border/60">|</span>
               <button
                 onClick={onNavigateToCms}
@@ -590,6 +546,254 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           </div>
         </div>
       </footer>
+
+      {/* Loyalty Stamp Card Modal */}
+      {isLoyaltyModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content max-w-lg w-full" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                {settings.logoUrl ? (
+                  <img src={settings.logoUrl} alt="Logo" style={{ height: '24px', width: 'auto', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ fontSize: '1.25rem' }}>⛩️</span>
+                )}
+                <h3 className="text-xl font-bold font-display text-white">Tori Loyalty Card</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsLoyaltyModalOpen(false);
+                  setSearchToken('');
+                  setSearchedCard(null);
+                  setSearchError('');
+                  setHasSearched(false);
+                }} 
+                className="modal-close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4">
+              <p className="text-text-secondary text-sm mb-6 leading-relaxed">
+                Enter your physical loyalty card token number below to verify your card status, view your details, and count your order stamps.
+              </p>
+              
+              <form onSubmit={handleSearch} className="flex gap-3 mb-4">
+                <div className="relative flex-grow">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
+                    <Search className="h-5 w-5" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Enter Token (e.g. TORI-777)"
+                    value={searchToken}
+                    onChange={(e) => setSearchToken(e.target.value)}
+                    className="form-input"
+                    style={{ paddingLeft: '2.75rem' }}
+                  />
+                </div>
+                <button type="submit" className="btn-primary">
+                  Verify Card
+                </button>
+              </form>
+
+              {searchError && (
+                <div className="text-ginger text-sm font-semibold mt-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-ginger"></span>
+                  {searchError}
+                </div>
+              )}
+
+              <div className="mt-8 flex justify-center">
+                {hasSearched && searchedCard ? (
+                  <div className="w-full">
+                    {/* Status Gating */}
+                    {searchedCard.status === 'new' && (
+                      <div className="glass-card animate-slideup" style={{ padding: '1.5rem', border: '1px solid var(--color-border)' }}>
+                        <div className="flex items-center gap-3 mb-4 text-gold">
+                          <Award className="w-6 h-6" />
+                          <h4 className="font-bold text-lg font-display">Register Your Token</h4>
+                        </div>
+                        <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+                          This token <code className="text-white font-mono bg-black/40 px-1.5 py-0.5 rounded">{searchedCard.token}</code> represents your first order at Tori Sushi. Provide your details below to register.
+                        </p>
+
+                        <form onSubmit={handleRegisterSubmit}>
+                          <div className="form-group">
+                            <label className="form-label">Full Name</label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
+                                <User className="h-4 w-4" />
+                              </span>
+                              <input
+                                type="text"
+                                required
+                                value={registerName}
+                                onChange={(e) => setRegisterName(e.target.value)}
+                                placeholder="John Doe"
+                                className="form-input text-sm"
+                                style={{ paddingLeft: '2.5rem' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">Phone Number</label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
+                                <Phone className="h-4 w-4" />
+                              </span>
+                              <input
+                                type="tel"
+                                required
+                                value={registerPhone}
+                                onChange={(e) => setRegisterPhone(e.target.value)}
+                                placeholder="01712XXXXXX"
+                                className="form-input text-sm"
+                                style={{ paddingLeft: '2.5rem' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">Email Address (Optional)</label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-muted">
+                                <Mail className="h-4 w-4" />
+                              </span>
+                              <input
+                                type="email"
+                                value={registerEmail}
+                                onChange={(e) => setRegisterEmail(e.target.value)}
+                                placeholder="john@example.com"
+                                className="form-input text-sm"
+                                style={{ paddingLeft: '2.5rem' }}
+                              />
+                            </div>
+                          </div>
+
+                          <button type="submit" className="btn-primary w-full justify-center">
+                            Register Loyalty Card
+                          </button>
+                        </form>
+                      </div>
+                    )}
+
+                    {searchedCard.status === 'pending' && (
+                      <div className="glass-card text-center animate-slideup" style={{ padding: '2rem' }}>
+                        <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Clock className="w-8 h-8 text-gold" />
+                        </div>
+                        <h4 className="font-bold text-xl mb-2 font-display text-gold">Awaiting Approval</h4>
+                        <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+                          Hey <strong>{searchedCard.customerName}</strong>, your registration for token <code className="text-white font-mono bg-black/40 px-1.5 py-0.5 rounded">{searchedCard.token}</code> has been received.
+                        </p>
+                        <div className="bg-black/30 border border-border rounded-lg p-3 text-xs text-text-muted mb-4">
+                          Status: Pending Owner Verification
+                        </div>
+                        <p className="text-xs text-text-muted">
+                          Our management team will approve your membership soon. Once approved, you can start tracking stamps for your orders!
+                        </p>
+                      </div>
+                    )}
+
+                    {searchedCard.status === 'approved' && (
+                      <div className="loyalty-card-wrapper animate-slideup w-full">
+                        <div className="loyalty-card-visual w-full">
+                          <div className="loyalty-card-header">
+                            <div>
+                              <div className="loyalty-card-title">TORI SUSHI</div>
+                              <div className="loyalty-card-sub">Loyalty Card</div>
+                            </div>
+                            {settings.logoUrl ? (
+                              <img src={settings.logoUrl} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
+                            ) : (
+                              <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
+                                <span style={{ fontSize: '0.8rem' }}>⛩️</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Stamp Grid */}
+                          <div className="loyalty-grid">
+                            {renderStampSlots(searchedCard)}
+                          </div>
+
+                          <div className="loyalty-card-footer">
+                            <div className="card-holder-info">
+                              <span className="card-holder-name">{searchedCard.customerName}</span>
+                              <span className="card-holder-token">Token: {searchedCard.token}</span>
+                            </div>
+                            <div className="stamp-count-text">
+                              {searchedCard.orderCount} Stamps
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Celebration Banners */}
+                        {searchedCard.orderCount > 0 && searchedCard.orderCount % settings.stampRewardLimit === 0 && (
+                          <div className="mt-4 p-4 rounded-xl border border-gold bg-amber-500/10 text-center animate-pulse">
+                            <p className="text-gold font-bold text-sm flex items-center justify-center gap-1.5">
+                              <span>🎉</span> 10th ORDER REACHED! <span>🎉</span>
+                            </p>
+                            <p className="text-xs text-text-primary mt-1">
+                              Present this card to the manager to redeem your FREE Sushi Roll!
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Summary status text */}
+                        <div className="mt-4 flex items-center justify-between text-xs text-text-muted px-2">
+                          <span className="flex items-center gap-1">
+                            <ShieldCheck className="w-4 h-4 text-wasabi" /> Active Loyalty Card
+                          </span>
+                          <span>
+                            Joined: {new Date(searchedCard.approvedAt || searchedCard.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Fallback Placeholder Visual Card */
+                  <div className="loyalty-card-wrapper opacity-35 w-full">
+                    <div className="loyalty-card-visual w-full">
+                      <div className="loyalty-card-header">
+                        <div>
+                          <div className="loyalty-card-title">TORI SUSHI</div>
+                          <div className="loyalty-card-sub">Loyalty Card</div>
+                        </div>
+                        {settings.logoUrl ? (
+                          <img src={settings.logoUrl} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
+                        ) : (
+                          <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
+                            <span style={{ fontSize: '0.8rem' }}>⛩️</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="loyalty-grid">
+                        {Array.from({ length: 10 }).map((_, i) => (
+                          <div key={i} className="stamp-slot empty-gate"></div>
+                        ))}
+                      </div>
+                      <div className="loyalty-card-footer">
+                        <div className="card-holder-info">
+                          <span className="card-holder-name">Enter Token Above</span>
+                          <span className="card-holder-token">Token: TORI-XXX</span>
+                        </div>
+                        <div className="stamp-count-text">
+                          0 Stamps
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, CheckCircle2, PlusCircle, LogOut, ArrowLeft, Plus, Edit2, Trash2, 
-  Settings as SettingsIcon, ShieldCheck, KeyRound, Save, RefreshCw, X, AlertTriangle 
+  Settings as SettingsIcon, ShieldCheck, KeyRound, Save, RefreshCw, X, AlertTriangle,
+  Clock, Award, Upload
 } from 'lucide-react';
 import { 
   getCards, saveCards, getMenu, saveMenu, getSettings, saveSettings, 
-  verifyAdminPassword, changeAdminPassword, LoyaltyCard, MenuItem, RestaurantSettings 
+  verifyAdminPassword, changeAdminPassword 
 } from '../utils/db';
+import type { LoyaltyCard, MenuItem, RestaurantSettings } from '../types';
 import confetti from 'canvas-confetti';
 
 interface OwnerDashboardProps {
@@ -16,7 +18,9 @@ interface OwnerDashboardProps {
 export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) => {
   // Authentication states
   const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('tori_sushi_admin_authenticated') === 'true';
+  });
   const [loginError, setLoginError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -26,13 +30,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   // Database states
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [settings, setSettings] = useState<RestaurantSettings>({
-    name: '',
-    phone: '',
-    address: '',
-    hours: '',
-    bannerText: '',
-    stampRewardLimit: 10
+  const [settings, setSettings] = useState<RestaurantSettings>(() => {
+    return getSettings();
   });
 
   // Card filter states
@@ -49,11 +48,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   // Modal / Form states for Menu Editing
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
+
+  // Custom Confirmation Modal states
+  const [cardTokenToDelete, setCardTokenToDelete] = useState<string | null>(null);
+  const [menuItemIdToDelete, setMenuItemIdToDelete] = useState<string | null>(null);
   const [menuFormTitle, setMenuFormTitle] = useState('');
   const [menuFormDesc, setMenuFormDesc] = useState('');
   const [menuFormPrice, setMenuFormPrice] = useState('');
   const [menuFormCategory, setMenuFormCategory] = useState('Maki Rolls');
   const [menuFormImageType, setMenuFormImageType] = useState<MenuItem['imageType']>('crab');
+  const [menuFormImageUrl, setMenuFormImageUrl] = useState('');
 
   // Settings form states
   const [settingsName, setSettingsName] = useState('');
@@ -62,6 +66,15 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   const [settingsHours, setSettingsHours] = useState('');
   const [settingsBannerText, setSettingsBannerText] = useState('');
   const [settingsStampLimit, setSettingsStampLimit] = useState(10);
+  const [settingsHeroTitle, setSettingsHeroTitle] = useState('');
+  const [settingsHeroSubtitle, setSettingsHeroSubtitle] = useState('');
+  const [settingsAboutTitle, setSettingsAboutTitle] = useState('');
+  const [settingsAboutText, setSettingsAboutText] = useState('');
+  const [settingsFacebookUrl, setSettingsFacebookUrl] = useState('');
+  const [settingsInstagramUrl, setSettingsInstagramUrl] = useState('');
+  const [settingsLogoUrl, setSettingsLogoUrl] = useState('');
+  const [settingsHeroImageUrl, setSettingsHeroImageUrl] = useState('');
+  const [settingsAboutImageUrl, setSettingsAboutImageUrl] = useState('');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -83,8 +96,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
     setSettingsPhone(loadedSettings.phone);
     setSettingsAddress(loadedSettings.address);
     setSettingsHours(loadedSettings.hours);
-    setSettingsBannerText(loadedSettings.bannerText);
+    setSettingsBannerText(loadedSettings.bannerText || '');
     setSettingsStampLimit(loadedSettings.stampRewardLimit);
+    setSettingsHeroTitle(loadedSettings.heroTitle || '');
+    setSettingsHeroSubtitle(loadedSettings.heroSubtitle || '');
+    setSettingsAboutTitle(loadedSettings.aboutTitle || '');
+    setSettingsAboutText(loadedSettings.aboutText || '');
+    setSettingsFacebookUrl(loadedSettings.facebookUrl || '');
+    setSettingsInstagramUrl(loadedSettings.instagramUrl || '');
+    setSettingsLogoUrl(loadedSettings.logoUrl || '');
+    setSettingsHeroImageUrl(loadedSettings.heroImageUrl || '');
+    setSettingsAboutImageUrl(loadedSettings.aboutImageUrl || '');
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -96,6 +118,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       const isValid = await verifyAdminPassword(password);
       if (isValid) {
         setIsAuthenticated(true);
+        sessionStorage.setItem('tori_sushi_admin_authenticated', 'true');
         setPassword('');
       } else {
         setLoginError('Invalid password. Please check your credentials.');
@@ -109,6 +132,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    sessionStorage.removeItem('tori_sushi_admin_authenticated');
     setActiveTab('cards');
   };
 
@@ -213,12 +237,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
   };
 
   // Delete Card
-  const handleDeleteCard = (token: string) => {
-    if (window.confirm(`Are you sure you want to delete card ${token}?`)) {
-      const updated = cards.filter(c => c.token !== token);
-      saveCards(updated);
-      setCards(updated);
-    }
+  const confirmDeleteCard = () => {
+    if (!cardTokenToDelete) return;
+    const updated = cards.filter(c => c.token.trim() !== cardTokenToDelete.trim());
+    saveCards(updated);
+    setCards(updated);
+    setCardTokenToDelete(null);
   };
 
   // --- MENU ITEM ACTIONS ---
@@ -231,12 +255,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       setMenuFormPrice(item.price.toString());
       setMenuFormCategory(item.category);
       setMenuFormImageType(item.imageType);
+      setMenuFormImageUrl(item.imageUrl || '');
     } else {
       setMenuFormTitle('');
       setMenuFormDesc('');
       setMenuFormPrice('');
       setMenuFormCategory('Maki Rolls');
       setMenuFormImageType('crab');
+      setMenuFormImageUrl('');
     }
     setIsMenuModalOpen(true);
   };
@@ -263,7 +289,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
             description: menuFormDesc,
             price: parsedPrice,
             category: menuFormCategory,
-            imageType: menuFormImageType
+            imageType: menuFormImageType,
+            imageUrl: menuFormImageUrl || undefined
           };
         }
         return m;
@@ -276,7 +303,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
         description: menuFormDesc,
         price: parsedPrice,
         category: menuFormCategory,
-        imageType: menuFormImageType
+        imageType: menuFormImageType,
+        imageUrl: menuFormImageUrl || undefined
       };
       updatedMenu = [...menu, newItem];
     }
@@ -287,12 +315,33 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
     setEditingMenuItem(null);
   };
 
-  const handleDeleteMenuItem = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this menu item?')) {
-      const updated = menu.filter(m => m.id !== id);
-      saveMenu(updated);
-      setMenu(updated);
+  const confirmDeleteMenuItem = () => {
+    if (!menuItemIdToDelete) return;
+    const updated = menu.filter(m => m.id !== menuItemIdToDelete);
+    saveMenu(updated);
+    setMenu(updated);
+    setMenuItemIdToDelete(null);
+  };
+
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onUploadSuccess: (base64: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size exceeds 2MB limit. Please choose a smaller image.');
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        onUploadSuccess(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // --- SETTINGS ACTIONS ---
@@ -305,11 +354,20 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       address: settingsAddress,
       hours: settingsHours,
       bannerText: settingsBannerText,
-      stampRewardLimit: settingsStampLimit
+      stampRewardLimit: settingsStampLimit,
+      heroTitle: settingsHeroTitle,
+      heroSubtitle: settingsHeroSubtitle,
+      aboutTitle: settingsAboutTitle,
+      aboutText: settingsAboutText,
+      facebookUrl: settingsFacebookUrl,
+      instagramUrl: settingsInstagramUrl,
+      logoUrl: settingsLogoUrl,
+      heroImageUrl: settingsHeroImageUrl,
+      aboutImageUrl: settingsAboutImageUrl
     };
     saveSettings(updatedSettings);
     setSettings(updatedSettings);
-    alert('Restaurant details updated successfully!');
+    alert('Restaurant details, branding assets, and website components updated successfully!');
   };
 
   // --- SECURITY ACTIONS ---
@@ -350,10 +408,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
     if (cardSearchQuery.trim()) {
       const q = cardSearchQuery.toLowerCase().trim();
       return (
-        c.token.toLowerCase().includes(q) ||
-        c.customerName.toLowerCase().includes(q) ||
-        c.customerPhone.includes(q) ||
-        c.customerEmail.toLowerCase().includes(q)
+        (c.token || '').toLowerCase().includes(q) ||
+        (c.customerName || '').toLowerCase().includes(q) ||
+        (c.customerPhone || '').includes(q) ||
+        (c.customerEmail || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -369,8 +427,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       <div className="min-h-screen flex items-center justify-center bg-bg-primary py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full glass-card animate-slideup" style={{ padding: '2.5rem' }}>
           <div className="text-center mb-8">
-            <div className="logo-icon-container mx-auto mb-4" style={{ width: '56px', height: '56px' }}>
-              <span style={{ fontSize: '1.75rem' }}>⛩️</span>
+            <div className="flex justify-center mb-4">
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt="Logo" style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
+              ) : (
+                <div className="logo-icon-container mx-auto" style={{ width: '56px', height: '56px' }}>
+                  <span style={{ fontSize: '1.75rem' }}>⛩️</span>
+                </div>
+              )}
             </div>
             <h2 className="text-3xl font-extrabold font-display">Tori Staff Login</h2>
             <p className="text-text-secondary text-xs mt-2">
@@ -438,10 +502,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
       <header className="py-4 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="logo-icon-container" style={{ width: '36px', height: '36px' }}>
-              <span style={{ fontSize: '1rem' }}>⛩️</span>
-            </div>
-            <h1 className="logo-text text-xl">TORI<span>cms</span></h1>
+            {settings.logoUrl ? (
+              <img src={settings.logoUrl} alt="Logo" style={{ height: '36px', width: 'auto', objectFit: 'contain', marginRight: '0.75rem' }} />
+            ) : (
+              <>
+                <div className="logo-icon-container" style={{ width: '36px', height: '36px' }}>
+                  <span style={{ fontSize: '1rem' }}>⛩️</span>
+                </div>
+                <h1 className="logo-text text-xl">TORI<span>cms</span></h1>
+              </>
+            )}
             <span className="badge badge-approved text-[10px] py-0.5 px-2">Manager Access</span>
           </div>
 
@@ -640,8 +710,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                                 </>
                               )}
                               <button 
-                                onClick={() => handleDeleteCard(card.token)}
+                                type="button"
+                                onClick={() => setCardTokenToDelete(card.token)}
                                 className="btn-secondary py-1 px-2 text-xs hover:text-ginger hover:border-ginger/40"
+                                title="Delete Card"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -714,8 +786,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                               <Edit2 className="w-3.5 h-3.5 text-gold" />
                             </button>
                             <button 
-                              onClick={() => handleDeleteMenuItem(item.id)}
+                              type="button"
+                              onClick={() => setMenuItemIdToDelete(item.id)}
                               className="btn-secondary p-1.5 hover:text-ginger"
+                              title="Delete Item"
                             >
                               <Trash2 className="w-3.5 h-3.5 text-ginger" />
                             </button>
@@ -739,7 +813,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
               </div>
 
               <form onSubmit={handleSaveSettingsSubmit} className="glass-card" style={{ padding: '2rem' }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Section 1: Core Details */}
+                <h3 className="text-white font-semibold font-display text-sm tracking-wider mb-4 border-b border-border/40 pb-2">1. Core Contact & Hours</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="form-group">
                     <label className="form-label">Restaurant Name</label>
                     <input
@@ -763,7 +840,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-4">
                   <label className="form-label">Physical Address</label>
                   <input
                     type="text"
@@ -774,7 +851,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-6">
                   <label className="form-label">Business Hours</label>
                   <input
                     type="text"
@@ -785,7 +862,187 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-6">
+                  <label className="form-label">Navigation Logo Image</label>
+                  <div 
+                    className="image-upload-zone"
+                    onClick={() => document.getElementById('settings-logo-input')?.click()}
+                  >
+                    {settingsLogoUrl ? (
+                      <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
+                        <img src={settingsLogoUrl} className="image-upload-preview" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} alt="Logo Preview" />
+                        <button 
+                          type="button" 
+                          className="remove-img-btn"
+                          onClick={() => setSettingsLogoUrl('')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-text-muted" style={{ margin: '0 auto' }} />
+                        <span className="image-upload-placeholder">Upload Custom Logo (Transparent background recommended, Max 2MB)</span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="settings-logo-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden-file-input"
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettingsLogoUrl(base64))}
+                  />
+                </div>
+
+                {/* Section 2: Hero Banner Customization */}
+                <h3 className="text-white font-semibold font-display text-sm tracking-wider mb-4 border-b border-border/40 pb-2">2. Landing Hero Banner</h3>
+                
+                <div className="form-group mb-4">
+                  <label className="form-label">Hero Banner Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={settingsHeroTitle}
+                    onChange={(e) => setSettingsHeroTitle(e.target.value)}
+                    placeholder="e.g. Crafting Art on a Bamboo Mat"
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group mb-6">
+                  <label className="form-label">Hero Banner Subtitle / Tagline</label>
+                  <textarea
+                    rows={2}
+                    required
+                    value={settingsHeroSubtitle}
+                    onChange={(e) => setSettingsHeroSubtitle(e.target.value)}
+                    placeholder="At Tori Sushi, every roll represents..."
+                    className="form-input py-2"
+                  />
+                </div>
+
+                <div className="form-group mb-6">
+                  <label className="form-label">Hero Background Image</label>
+                  <div 
+                    className="image-upload-zone"
+                    onClick={() => document.getElementById('settings-hero-input')?.click()}
+                  >
+                    {settingsHeroImageUrl ? (
+                      <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
+                        <img src={settingsHeroImageUrl} className="image-upload-preview" alt="Hero Preview" />
+                        <button 
+                          type="button" 
+                          className="remove-img-btn"
+                          onClick={() => setSettingsHeroImageUrl('')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-text-muted" style={{ margin: '0 auto' }} />
+                        <span className="image-upload-placeholder">Upload Custom Hero Banner Photo (Max 2MB)</span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="settings-hero-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden-file-input"
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettingsHeroImageUrl(base64))}
+                  />
+                </div>
+
+                {/* Section 3: About Us Customization */}
+                <h3 className="text-white font-semibold font-display text-sm tracking-wider mb-4 border-b border-border/40 pb-2">3. About Us Details</h3>
+                
+                <div className="form-group mb-4">
+                  <label className="form-label">About Us Section Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={settingsAboutTitle}
+                    onChange={(e) => setSettingsAboutTitle(e.target.value)}
+                    placeholder="e.g. The Tori Sushi Story"
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group mb-6">
+                  <label className="form-label">About Us Story Content</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={settingsAboutText}
+                    onChange={(e) => setSettingsAboutText(e.target.value)}
+                    placeholder="Tori Sushi brings the finest Japanese flavors..."
+                    className="form-input py-2"
+                  />
+                </div>
+
+                <div className="form-group mb-6">
+                  <label className="form-label">About Us Story Photo</label>
+                  <div 
+                    className="image-upload-zone"
+                    onClick={() => document.getElementById('settings-about-input')?.click()}
+                  >
+                    {settingsAboutImageUrl ? (
+                      <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
+                        <img src={settingsAboutImageUrl} className="image-upload-preview" alt="About Preview" />
+                        <button 
+                          type="button" 
+                          className="remove-img-btn"
+                          onClick={() => setSettingsAboutImageUrl('')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-text-muted" style={{ margin: '0 auto' }} />
+                        <span className="image-upload-placeholder">Upload Custom Story Photo (Max 2MB)</span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="settings-about-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden-file-input"
+                    onChange={(e) => handleImageUpload(e, (base64) => setSettingsAboutImageUrl(base64))}
+                  />
+                </div>
+
+                {/* Section 4: Social Links & Notices */}
+                <h3 className="text-white font-semibold font-display text-sm tracking-wider mb-4 border-b border-border/40 pb-2">4. Social Media & Announcement Notices</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="form-group">
+                    <label className="form-label">Facebook Page Link</label>
+                    <input
+                      type="url"
+                      value={settingsFacebookUrl}
+                      onChange={(e) => setSettingsFacebookUrl(e.target.value)}
+                      placeholder="e.g. https://www.facebook.com/tori.sushi.bd"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Instagram Link</label>
+                    <input
+                      type="url"
+                      value={settingsInstagramUrl}
+                      onChange={(e) => setSettingsInstagramUrl(e.target.value)}
+                      placeholder="e.g. https://www.instagram.com/tori.sushi.bd"
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group mb-4">
                   <label className="form-label">Header Announcement Notice</label>
                   <textarea
                     rows={2}
@@ -796,7 +1053,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-6">
                   <label className="form-label">Loyalty Card Max stamps limit</label>
                   <input
                     type="number"
@@ -970,6 +1227,39 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                 </select>
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Menu Item Photo</label>
+                <div 
+                  className="image-upload-zone"
+                  onClick={() => document.getElementById('menu-item-image-input')?.click()}
+                >
+                  {menuFormImageUrl ? (
+                    <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
+                      <img src={menuFormImageUrl} className="image-upload-preview" alt="Preview" />
+                      <button 
+                        type="button" 
+                        className="remove-img-btn"
+                        onClick={() => setMenuFormImageUrl('')}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-text-muted" style={{ margin: '0 auto' }} />
+                      <span className="image-upload-placeholder">Upload Custom Photo (Max 2MB)</span>
+                    </>
+                  )}
+                </div>
+                <input
+                  id="menu-item-image-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden-file-input"
+                  onChange={(e) => handleImageUpload(e, (base64) => setMenuFormImageUrl(base64))}
+                />
+              </div>
+
               <div className="flex gap-3 mt-6">
                 <button type="submit" className="btn-primary flex-grow justify-center">
                   {editingMenuItem ? 'Update Menu Item' : 'Create Menu Item'}
@@ -983,6 +1273,70 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Card Confirmation Modal */}
+      {cardTokenToDelete && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content max-w-sm w-full text-center" style={{ padding: '2rem' }}>
+            <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-ginger" />
+            </div>
+            <h3 className="text-xl font-bold font-display text-white mb-2">Delete Loyalty Card?</h3>
+            <p className="text-text-secondary text-xs mb-6 leading-relaxed">
+              Are you sure you want to permanently delete the loyalty card token <strong className="text-white font-mono">{cardTokenToDelete}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={confirmDeleteCard} 
+                className="btn-primary flex-grow justify-center"
+                style={{ background: '#dc2626' }}
+              >
+                Delete Card
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setCardTokenToDelete(null)}
+                className="btn-secondary flex-grow justify-center"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Menu Item Confirmation Modal */}
+      {menuItemIdToDelete && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content max-w-sm w-full text-center" style={{ padding: '2rem' }}>
+            <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-ginger" />
+            </div>
+            <h3 className="text-xl font-bold font-display text-white mb-2">Delete Menu Item?</h3>
+            <p className="text-text-secondary text-xs mb-6 leading-relaxed">
+              Are you sure you want to permanently delete this sushi menu item? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={confirmDeleteMenuItem} 
+                className="btn-primary flex-grow justify-center"
+                style={{ background: '#dc2626' }}
+              >
+                Delete Item
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setMenuItemIdToDelete(null)}
+                className="btn-secondary flex-grow justify-center"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
