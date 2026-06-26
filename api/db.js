@@ -64,6 +64,12 @@ export async function connectToDatabase() {
   // Seed collections if empty
   await seedIfEmpty(db);
 
+  // Ensure TTL index on rate_limit_logs (delete after 15 minutes / 900 seconds)
+  await db.collection('rate_limit_logs').createIndex(
+    { timestamp: 1 },
+    { expireAfterSeconds: 900 }
+  ).catch(err => console.error('Error creating TTL index:', err));
+
   return db;
 }
 
@@ -92,3 +98,93 @@ async function seedIfEmpty(db) {
 }
 
 export { sha256 };
+
+export function sanitizeUrl(url) {
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:')
+  ) {
+    return '';
+  }
+  return trimmed;
+}
+
+export function validateAndSanitizeImage(url) {
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  
+  if (trimmed.toLowerCase().startsWith('data:')) {
+    const match = trimmed.match(/^data:([^;]+);base64,(.+)$/i);
+    if (!match) {
+      return '';
+    }
+    
+    const mimeType = match[1].toLowerCase();
+    const base64Data = match[2];
+    
+    // 1. Strict MIME type validation
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      return '';
+    }
+    
+    // 2. Strict size validation (3MB limit in Base64 representation)
+    const approxSizeBytes = (base64Data.length * 3) / 4;
+    const maxSizeBytes = 3 * 1024 * 1024; // 3MB
+    if (approxSizeBytes > maxSizeBytes) {
+      return '';
+    }
+    
+    // 3. Strict base64 format validation
+    const base64Regex = /^[A-Za-z0-9+/=]+$/;
+    if (!base64Regex.test(base64Data)) {
+      return '';
+    }
+    
+    return trimmed;
+  }
+  
+  return sanitizeUrl(trimmed);
+}
+
+
+export async function applyRateLimit(req, res, actionName, limit = 60, windowMs = 60000) {
+  const ip = req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             (req.socket && req.socket.remoteAddress) || 
+             '127.0.0.1';
+
+  try {
+    const db = await connectToDatabase();
+    const collection = db.collection('rate_limit_logs');
+
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - windowMs);
+
+    const requestCount = await collection.countDocuments({
+      ip,
+      action: actionName,
+      timestamp: { $gte: windowStart }
+    });
+
+    if (requestCount >= limit) {
+      res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      return false;
+    }
+
+    await collection.insertOne({
+      ip,
+      action: actionName,
+      timestamp: now
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Rate limiting error:', error);
+    return true;
+  }
+}

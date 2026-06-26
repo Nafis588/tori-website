@@ -45,8 +45,6 @@ const DEFAULT_SETTINGS: RestaurantSettings = {
   instagramUrl: 'https://www.instagram.com/tori.sushi.bd'
 };
 
-const DEFAULT_ADMIN_HASH = '240eb518567520e1a5392cf99a80b06b99f30b91cb34d284a7e289bf598912e8';
-
 // Helper: SHA-256 hashing using Web Crypto API (browser)
 async function sha256(message: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(message);
@@ -75,16 +73,13 @@ function initializeLocalStorage() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_SETTINGS));
     }
   }
-  if (!localStorage.getItem(ADMIN_HASH_KEY)) {
-    localStorage.setItem(ADMIN_HASH_KEY, DEFAULT_ADMIN_HASH);
-  }
 }
 
 // =================== MENU ===================
 
 export async function getMenu(): Promise<MenuItem[]> {
   try {
-    const res = await fetch('/api/menu');
+    const res = await fetch('/api/v1/menu');
     if (res.ok) return await res.json();
   } catch { /* API not available */ }
   // Fallback
@@ -94,7 +89,7 @@ export async function getMenu(): Promise<MenuItem[]> {
 
 export async function saveMenu(menu: MenuItem[]): Promise<void> {
   try {
-    const res = await fetch('/api/menu', {
+    const res = await fetch('/api/v1/menu', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: menu })
@@ -109,7 +104,7 @@ export async function saveMenu(menu: MenuItem[]): Promise<void> {
 
 export async function getCards(): Promise<LoyaltyCard[]> {
   try {
-    const res = await fetch('/api/cards');
+    const res = await fetch('/api/v1/cards');
     if (res.ok) return await res.json();
   } catch { /* API not available */ }
   // Fallback
@@ -119,7 +114,7 @@ export async function getCards(): Promise<LoyaltyCard[]> {
 
 export async function saveCards(cards: LoyaltyCard[]): Promise<void> {
   try {
-    const res = await fetch('/api/cards', {
+    const res = await fetch('/api/v1/cards', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cards })
@@ -134,7 +129,7 @@ export async function saveCards(cards: LoyaltyCard[]): Promise<void> {
 
 export async function getSettings(): Promise<RestaurantSettings> {
   try {
-    const res = await fetch('/api/settings');
+    const res = await fetch('/api/v1/settings');
     if (res.ok) {
       const data = await res.json();
       // Merge with defaults to ensure all fields exist
@@ -148,7 +143,7 @@ export async function getSettings(): Promise<RestaurantSettings> {
 
 export async function saveSettings(settings: RestaurantSettings): Promise<void> {
   try {
-    const res = await fetch('/api/settings', {
+    const res = await fetch('/api/v1/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
@@ -161,28 +156,48 @@ export async function saveSettings(settings: RestaurantSettings): Promise<void> 
 
 // =================== AUTH ===================
 
+export async function preloadDefaultHash(): Promise<void> {
+  if (localStorage.getItem(ADMIN_HASH_KEY)) return;
+  try {
+    const res = await fetch('/api/v1/auth');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.defaultHash) {
+        localStorage.setItem(ADMIN_HASH_KEY, data.defaultHash);
+      }
+    }
+  } catch { /* API not available */ }
+}
+
 export async function verifyAdminPassword(password: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/auth', {
+    const res = await fetch('/api/v1/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'verify', password })
     });
     if (res.ok) {
       const data = await res.json();
-      return data.valid === true;
+      if (data.valid === true) {
+        // Cache the validated password hash locally for offline fallback
+        const inputHash = await sha256(password);
+        localStorage.setItem(ADMIN_HASH_KEY, inputHash);
+        return true;
+      }
+      return false;
     }
   } catch { /* API not available */ }
   // Fallback: verify locally
   initializeLocalStorage();
-  const storedHash = localStorage.getItem(ADMIN_HASH_KEY) || DEFAULT_ADMIN_HASH;
+  const storedHash = localStorage.getItem(ADMIN_HASH_KEY);
+  if (!storedHash) return false;
   const inputHash = await sha256(password);
   return storedHash === inputHash;
 }
 
 export async function changeAdminPassword(oldPass: string, newPass: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/auth', {
+    const res = await fetch('/api/v1/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'change', oldPassword: oldPass, newPassword: newPass })

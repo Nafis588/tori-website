@@ -3,6 +3,7 @@ import { Search, User, Phone, Mail, Award, MapPin, Clock, ExternalLink, ShieldCh
 import { getCards, saveCards, getMenu, getSettings } from '../utils/db';
 import type { LoyaltyCard, MenuItem, RestaurantSettings } from '../types';
 import confetti from 'canvas-confetti';
+import { sanitizeUrl } from '../utils/security';
 
 interface RestaurantHomeProps {
   onNavigateToCms: () => void;
@@ -281,8 +282,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
       <header>
         <div className="nav-container">
           <a href="#" className="logo-link">
-            {settings.logoUrl ? (
-              <img src={settings.logoUrl} alt="Tori Sushi Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+            {sanitizeUrl(settings.logoUrl) ? (
+              <img src={sanitizeUrl(settings.logoUrl)} alt="Tori Sushi Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain', display: 'block' }} />
             ) : (
               <>
                 <div className="logo-icon-container">
@@ -335,9 +336,9 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
         <section 
           className="text-center py-20 max-w-5xl mx-auto animate-slideup rounded-3xl overflow-hidden relative"
           style={
-            settings.heroImageUrl 
+            sanitizeUrl(settings.heroImageUrl) 
               ? { 
-                  backgroundImage: `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url(${settings.heroImageUrl})`,
+                  backgroundImage: `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url(${sanitizeUrl(settings.heroImageUrl)})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   border: '1px solid var(--color-border)',
@@ -370,10 +371,10 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
         <section id="about" className="py-16 border-t border-border">
           <div className="grid-2">
             <div className="relative animate-slideup">
-              {settings.aboutImageUrl ? (
+              {sanitizeUrl(settings.aboutImageUrl) ? (
                 <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-glass)' }}>
                   <img 
-                    src={settings.aboutImageUrl} 
+                    src={sanitizeUrl(settings.aboutImageUrl)} 
                     alt="About Tori Sushi" 
                     style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '380px', objectFit: 'cover' }} 
                   />
@@ -442,10 +443,10 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           <div className="menu-grid">
             {filteredMenu.map(item => (
               <div key={item.id} className="menu-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
-                {item.imageUrl ? (
+                {sanitizeUrl(item.imageUrl) ? (
                   <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
                     <img 
-                      src={item.imageUrl} 
+                      src={sanitizeUrl(item.imageUrl)} 
                       alt={item.title} 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       className="hover-scale-img"
@@ -480,8 +481,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid-3 mb-8">
             <div>
-              {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt="Tori Sushi Logo" className="mb-3" style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              {sanitizeUrl(settings.logoUrl) ? (
+                <img src={sanitizeUrl(settings.logoUrl)} alt="Tori Sushi Logo" className="mb-3" style={{ height: '36px', width: 'auto', objectFit: 'contain', display: 'block' }} />
               ) : (
                 <div className="flex items-center gap-2 mb-3">
                   <div className="logo-icon-container" style={{ width: '28px', height: '28px', border: '1px solid var(--color-border)' }}>
@@ -519,9 +520,9 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           <div className="border-t border-border/40 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
             <p>&copy; {new Date().getFullYear()} Tori Sushi Bangladesh. All rights reserved. <span className="text-text-muted">| Made by Obscura IT</span></p>
             <div className="flex gap-4">
-              {settings.facebookUrl && (
+              {sanitizeUrl(settings.facebookUrl) && (
                 <a
-                  href={settings.facebookUrl}
+                  href={sanitizeUrl(settings.facebookUrl)}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-white flex items-center gap-1"
@@ -529,11 +530,11 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
                   Facebook Page <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
-              {settings.instagramUrl && (
+              {sanitizeUrl(settings.instagramUrl) && (
                 <>
                   <span className="text-border/60">|</span>
                   <a
-                    href={settings.instagramUrl}
+                    href={sanitizeUrl(settings.instagramUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-white flex items-center gap-1"
@@ -560,8 +561,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
           <div className="modal-content max-w-lg w-full" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <div className="flex items-center gap-2">
-                {settings.logoUrl ? (
-                  <img src={settings.logoUrl} alt="Logo" style={{ height: '24px', width: 'auto', objectFit: 'contain' }} />
+                {sanitizeUrl(settings.logoUrl) ? (
+                  <img src={sanitizeUrl(settings.logoUrl)} alt="Logo" style={{ height: '24px', width: 'auto', objectFit: 'contain' }} />
                 ) : (
                   <span style={{ fontSize: '1.25rem' }}>⛩️</span>
                 )}
@@ -713,8 +714,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
                               <div className="loyalty-card-title">TORI SUSHI</div>
                               <div className="loyalty-card-sub">Loyalty Card</div>
                             </div>
-                            {settings.logoUrl ? (
-                              <img src={settings.logoUrl} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
+                            {sanitizeUrl(settings.logoUrl) ? (
+                              <img src={sanitizeUrl(settings.logoUrl)} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
                             ) : (
                               <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
                                 <span style={{ fontSize: '0.8rem' }}>⛩️</span>
@@ -771,8 +772,8 @@ export const RestaurantHome: React.FC<RestaurantHomeProps> = ({ onNavigateToCms 
                           <div className="loyalty-card-title">TORI SUSHI</div>
                           <div className="loyalty-card-sub">Loyalty Card</div>
                         </div>
-                        {settings.logoUrl ? (
-                          <img src={settings.logoUrl} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
+                        {sanitizeUrl(settings.logoUrl) ? (
+                          <img src={sanitizeUrl(settings.logoUrl)} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', borderRadius: '4px' }} />
                         ) : (
                           <div className="logo-icon-container" style={{ width: '32px', height: '32px', border: '1px solid white' }}>
                             <span style={{ fontSize: '0.8rem' }}>⛩️</span>

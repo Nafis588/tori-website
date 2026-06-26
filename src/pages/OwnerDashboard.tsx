@@ -10,6 +10,7 @@ import {
 } from '../utils/db';
 import type { LoyaltyCard, MenuItem, RestaurantSettings } from '../types';
 import confetti from 'canvas-confetti';
+import { sanitizeUrl } from '../utils/security';
 
 interface OwnerDashboardProps {
   onBackToHome: () => void;
@@ -882,9 +883,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                     className="image-upload-zone"
                     onClick={() => document.getElementById('settings-logo-input')?.click()}
                   >
-                    {settingsLogoUrl ? (
+                    {sanitizeUrl(settingsLogoUrl) ? (
                       <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
-                        <img src={settingsLogoUrl} className="image-upload-preview" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} alt="Logo Preview" />
+                        <img src={sanitizeUrl(settingsLogoUrl)} className="image-upload-preview" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} alt="Logo Preview" />
                         <button 
                           type="button" 
                           className="remove-img-btn"
@@ -942,9 +943,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                     className="image-upload-zone"
                     onClick={() => document.getElementById('settings-hero-input')?.click()}
                   >
-                    {settingsHeroImageUrl ? (
+                    {sanitizeUrl(settingsHeroImageUrl) ? (
                       <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
-                        <img src={settingsHeroImageUrl} className="image-upload-preview" alt="Hero Preview" />
+                        <img src={sanitizeUrl(settingsHeroImageUrl)} className="image-upload-preview" alt="Hero Preview" />
                         <button 
                           type="button" 
                           className="remove-img-btn"
@@ -1002,9 +1003,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                     className="image-upload-zone"
                     onClick={() => document.getElementById('settings-about-input')?.click()}
                   >
-                    {settingsAboutImageUrl ? (
+                    {sanitizeUrl(settingsAboutImageUrl) ? (
                       <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
-                        <img src={settingsAboutImageUrl} className="image-upload-preview" alt="About Preview" />
+                        <img src={sanitizeUrl(settingsAboutImageUrl)} className="image-upload-preview" alt="About Preview" />
                         <button 
                           type="button" 
                           className="remove-img-btn"
@@ -1247,9 +1248,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ onBackToHome }) 
                   className="image-upload-zone"
                   onClick={() => document.getElementById('menu-item-image-input')?.click()}
                 >
-                  {menuFormImageUrl ? (
+                  {sanitizeUrl(menuFormImageUrl) ? (
                     <div className="image-preview-badge" onClick={(e) => e.stopPropagation()}>
-                      <img src={menuFormImageUrl} className="image-upload-preview" alt="Preview" />
+                      <img src={sanitizeUrl(menuFormImageUrl)} className="image-upload-preview" alt="Preview" />
                       <button 
                         type="button" 
                         className="remove-img-btn"
